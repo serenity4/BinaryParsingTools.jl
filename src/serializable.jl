@@ -107,7 +107,7 @@ where `param_count` can be any expression, which may depend on other structure m
 Fields can be read in a custom manner by using a syntax of the form
 `params::SomeField << ex` where `ex` can be e.g. `read(io, SomeField, other_field.length)`
 where `other_field` can refer to any previous field in the struct. This expression may
-refer to a special variable `__origin__`, which is the position of the IO before parsing the struct.y hb
+refer to a special variable `__origin__`, which is the position of the IO before parsing the struct.
 
 Additional arguments required for `Base.read` can be specified with the syntax `@arg name` at the very start of the structure,
 before any actual fields. In this way, the definition for `Base.read` will include these extra arguments. Calling code

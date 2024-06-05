@@ -32,3 +32,8 @@ Base.string(tag::Tag) = join(Char.(tag.data))
 Base.convert(::Type{Tag}, str::AbstractString) = Tag(str)
 Base.convert(::Type{Tag{N}}, str::AbstractString) where {N} = Tag{N}(str)
 Base.isless(x::Tag, y::Tag) = isless(string(x), string(y))
+function Base.write(io::IO, tag::Tag)
+  for char in tag.data
+    write(io, char)
+  end
+end

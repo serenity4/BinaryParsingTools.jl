@@ -1,10 +1,14 @@
 name = "BinaryParsingTools"
 uuid = "6663bfc4-f836-4634-93ec-aee42a53a86a"
-authors = ["Cédric BELMANT"]
 version = "0.1.0"
+authors = ["Cédric BELMANT"]
+
+[deps]
+SwapStreams = "0b152c4a-7e29-418b-9258-223db38db9d9"
 
 [compat]
-julia = "1.9"
+SwapStreams = "0.2.0"
+julia = "1.11"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

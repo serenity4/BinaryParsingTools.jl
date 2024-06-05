@@ -25,7 +25,10 @@ end
 include("serializable.jl")
 include("tag.jl")
 
-export read_at, @serializable, Tag, @tag_str, Tag2, Tag3, Tag4
+export @serializable,
+       read_at,
+       Tag, Tag2, Tag3, Tag4,
+       @tag_str, @tag2_str, @tag3_str, @tag4_str
 
 # XXX: seems to crash CSTParser for VSCode linting
 # public read, swap_endianness, read_binary

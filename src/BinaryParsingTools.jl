@@ -4,6 +4,8 @@ using SwapStreams: SwapStream
 using .Meta: isexpr
 
 """
+    swap_endianness(io::IO, ::Type{T})
+
 Decide whether to swap the endianness on any data read from the provided IO (defaults to `false` if not extended).
 
 If the binary format being used chooses a specific endianness, you may extend this function
@@ -30,10 +32,26 @@ function swap_endianness end
 
 swap_endianness(io::IO, ::Type{T}) where {T} = false
 
+"""
+    cache_stream_in_ram(io::IO, ::Type{T})
+
+Determine whether to cache the full IOStream in RAM or not to increase performance, using an `IOBuffer`.
+
+Defaults to true. This is advised for small-ish files, because access will be much easier if only a single IO access is
+required (one for reading the whole binary blob). On the other hand, that will increase RAM consumption,
+and dramatically so for large files.
+"""
+function cache_stream_in_ram end
+
+cache_stream_in_ram(io::IO, ::Type{T}) where {T} = true
+
 const BinaryIO = SwapStream
 
-read_binary(io::IOBuffer, ::Type{T}; kwargs...) where {T} = read(SwapStream(swap_endianness(io, T), io), T; kwargs...)
-read_binary(io::IO, ::Type{T}; kwargs...) where {T} = read_binary(IOBuffer(read(io)), T; kwargs...)
+function read_binary(io::IO, ::Type{T}; kwargs...) where {T}
+  cache_stream_in_ram(io, T) && (io = IOBuffer(read(io)))
+  io = BinaryIO(swap_endianness(io, T), io)
+  read(io, T; kwargs...)
+end
 
 """
 Read a value of type `T` located at an offset from a given start (defaulting
@@ -47,15 +65,26 @@ function read_at(io::IO, @nospecialize(T), offset, args...; start = position(io)
   val
 end
 
+function read_null_terminated_string(io::IO)
+  bytes = UInt8[]
+  next = read(io, UInt8)
+  while next ≠ 0x00
+    push!(bytes, next)
+    next = read(io, UInt8)
+  end
+  String(bytes)
+end
+
 include("serializable.jl")
 include("tag.jl")
 
 export @serializable,
-       read_binary, BinaryIO, read_at,
+       read_binary, BinaryIO,
+       read_at, read_null_terminated_string,
        Tag, Tag2, Tag3, Tag4,
        @tag_str, @tag2_str, @tag3_str, @tag4_str
 
 # XXX: seems to crash CSTParser for VSCode linting
-# public swap_endianness
+# public swap_endianness, cache_stream_in_ram
 
 end

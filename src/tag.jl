@@ -26,7 +26,7 @@ macro tag2_str(str) Tag2(str) end
 macro tag3_str(str) Tag3(str) end
 macro tag4_str(str) Tag4(str) end
 
-Base.read(io::IO, T::Type{Tag{N}}) where {N} = T(ntuple(_ -> read(io, UInt8), N))
+Base.read(io::IO, ::Type{Tag{N}}) where {N} = Tag{N}(ntuple(_ -> read(io, UInt8), N))
 Base.show(io::IO, tag::Tag) = print(io, '"', join(Char.(tag.data)), '"')
 Base.string(tag::Tag) = join(Char.(tag.data))
 Base.convert(::Type{Tag}, str::AbstractString) = Tag(str)

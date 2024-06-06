@@ -2,7 +2,7 @@ function read_expr(field, linenum::LineNumberNode)
   if isexpr(field, :(::))
     T = field.args[2]
     isexpr(T, :curly) && T.args[1] == :Vector && error("Vectors must have a corresponding length.")
-    isexpr(T, :curly) && T.args[1] == :NTuple && return :(Tuple(read(io, $(T.args[2]) for _ in 1:$(T.args[3]))))
+    isexpr(T, :curly) && T.args[1] == :NTuple && return :(ntuple(_ -> read(io, $(T.args[3])), $(T.args[2])))
     T == :String && error("Strings are not supported yet.")
     return :(read(io, $T))
   elseif isexpr(field, :call) && field.args[1] == :(=>)
@@ -37,7 +37,9 @@ function serializable(ex, source::LineNumberNode)
 
   t = typedecl
   isexpr(t, :(<:)) && (t = first(t.args))
-  isexpr(t, :curly) && error("Parametric types are not supported.")
+  t_with_parameters = t
+  parameters = nothing
+  isexpr(t, :curly) && ((t, parameters) = (t.args[1], t.args[2:end]))
   @assert t isa Symbol
   exprs = Expr[]
   lengths = Dict{Symbol,Any}()
@@ -60,28 +62,26 @@ function serializable(ex, source::LineNumberNode)
       push!(fieldnames, field)
       push!(fields_withlength, field)
       isa(l, Symbol) && push!(required_fields, l)
-      continue
     else
+      isa(ex, Symbol) && error("Field $(repr(ex)) must be typed.")
       isexpr(ex, :call) && ex.args[1] == :(<<) && (ex = ex.args[2])
-      if isexpr(ex, :(::))
-        push!(fieldnames, first(ex.args))
-        continue
-      end
+      field = isexpr(ex, :(::)) ? first(ex.args) : ex::Symbol
+      push!(fieldnames, field)
     end
-    error("Field $(repr(ex)) must be typed.")
   end
 
   body = Expr(:block, source, :(__origin__ = position(io)))
   for (linenum, var, field) in zip(field_linenums, fieldnames, fields_nolinenums)
     push!(body.args, linenum, :($var = $(read_expr(field, linenum))))
   end
-  push!(body.args, :($t($(fieldnames...))))
-  fdecl = :(Base.read(io::IO, ::Type{$t}))
+  push!(body.args, :($t_with_parameters($(fieldnames...))))
+  fdef = :(Base.read(io::IO, ::Type{$t_with_parameters}))
+  fdecl = isnothing(parameters) ? fdef : Expr(:where, fdef, parameters...)
   for ex in argmeta
     if isexpr(ex, :macrocall) && ex.args[1] == Symbol("@arg")
       argex = last(ex.args)
       Meta.isexpr(argex, :(=)) && (argex.head = :kw)
-      push!(fdecl.args, argex)
+      push!(fdef.args, argex)
     end
   end
   read_f = Expr(:function, fdecl, body)

@@ -12,6 +12,12 @@ end
   name::Tag4
 end
 
+@serializable struct TestPadded
+  magic_number::UInt32
+  @reserved 4 # 4 bytes
+  name::Tag4
+end
+
 BinaryParsingTools.swap_endianness(::IO, ::Type{TestDataSwapped}) = true
 
 @testset "BinaryParsingTools.jl" begin
@@ -35,6 +41,13 @@ BinaryParsingTools.swap_endianness(::IO, ::Type{TestDataSwapped}) = true
     @test data.name === tag4"test"
     data = open(io -> read_binary(io, TestDataSwapped), joinpath(@__DIR__, "test.bin"))
     @test data.magic_number === 0x00001000
+    io = IOBuffer()
+    data = TestPadded(0x00100000, tag4"test")
+    write(io, data.magic_number)
+    write(io, 0x00000000)
+    write(io, data.name)
+    seekstart(io)
+    @test read(io, TestPadded) == data
   end
 
   @testset "@serializable macro" begin

@@ -25,14 +25,22 @@ function serializable(ex, source::LineNumberNode)
   typedecl, fields = ex.args[2:3]
   fields = isexpr(fields, :block) ? fields.args : [fields]
 
-  argmeta = Expr[]
+  argmeta = []
+  reserved = Pair{Int64, Expr}[]
+  offset = Ref{Int64}(0)
   filter!(fields) do ex
-    if isexpr(ex, :macrocall) && ex.args[1] == Symbol("@arg")
-      push!(argmeta, ex)
-      false
-    else
-      true
+    isexpr(ex, :macrocall) && ex.args[1] == Symbol("@arg") && begin
+      length(ex.args) == 3 || error("Expected a single argument to `@arg`, got $(length(ex.args) - 2) arguments")
+      push!(argmeta, ex.args[2])
+      return false
     end
+    isexpr(ex, :macrocall) && ex.args[1] == Symbol("@reserved") && begin
+      length(ex.args) ≤ 4 || error("Expected one or two arguments to `@reserved`, got $(length(ex.args) - 2)arguments")
+      push!(reserved, offset[] => ex)
+      return false
+    end
+    !isa(ex, LineNumberNode) && (offset[] += 1)
+    true
   end
 
   t = typedecl
@@ -71,18 +79,23 @@ function serializable(ex, source::LineNumberNode)
   end
 
   body = Expr(:block, source, :(__origin__ = position(io)))
-  for (linenum, var, field) in zip(field_linenums, fieldnames, fields_nolinenums)
+  for (i, (linenum, var, field)) in enumerate(zip(field_linenums, fieldnames, fields_nolinenums))
+    if !isempty(reserved)
+      offset, spec = reserved[1]
+      if i - 1 == offset
+        popfirst!(reserved)
+        skip = spec.args[3]
+        push!(body.args, spec.args[2], :(skip(io, $skip)))
+      end
+    end
     push!(body.args, linenum, :($var = $(read_expr(field, linenum))))
   end
   push!(body.args, :($t_with_parameters($(fieldnames...))))
   fdef = :(Base.read(io::IO, ::Type{$t_with_parameters}))
   fdecl = isnothing(parameters) ? fdef : Expr(:where, fdef, parameters...)
   for ex in argmeta
-    if isexpr(ex, :macrocall) && ex.args[1] == Symbol("@arg")
-      argex = last(ex.args)
-      Meta.isexpr(argex, :(=)) && (argex.head = :kw)
-      push!(fdef.args, argex)
-    end
+    Meta.isexpr(ex, :(=)) && (ex.head = :kw)
+    push!(fdef.args, ex)
   end
   read_f = Expr(:function, fdecl, body)
 
@@ -112,6 +125,8 @@ refer to a special variable `__origin__`, which is the position of the IO before
 Additional arguments required for `Base.read` can be specified with the syntax `@arg name` at the very start of the structure,
 before any actual fields. In this way, the definition for `Base.read` will include these extra arguments. Calling code
 will then have to provide these extra arguments.
+
+If a struct field is reserved in a binary format, and may be safely ignored when reading from IO, use `@reserved <nbytes>`. In this way, the field will not be part of the struct, and instead <nbytes> bytes will be skipped at that point during parsing.
 
 `LineNumberNode`s will be preserved and inserted wherever necessary to keep stack traces informative.
 
@@ -143,6 +158,11 @@ Here is an advanced example which makes use of all the features:
 
   # Length of `ligature_attach_offsets`.
   ligature_count::UInt16
+
+  # Declare a reserved field, usually meant for padding.
+  # No field will be added to the struct itself, but 6 bytes will
+  # be skipped at that point before parsing the next field.
+  @reserved 6
 
   # Offsets in bytes from the origin of the structure to data blocks formatted as `LigatureAttachTable`s.
   ligature_attach_offsets::Vector{UInt16} => ligature_count

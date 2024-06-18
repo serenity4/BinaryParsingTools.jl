@@ -31,7 +31,7 @@ function serializable(ex, source::LineNumberNode)
   filter!(fields) do ex
     isexpr(ex, :macrocall) && ex.args[1] == Symbol("@arg") && begin
       length(ex.args) == 3 || error("Expected a single argument to `@arg`, got $(length(ex.args) - 2) arguments")
-      push!(argmeta, ex.args[2])
+      push!(argmeta, ex.args[3])
       return false
     end
     isexpr(ex, :macrocall) && ex.args[1] == Symbol("@reserved") && begin

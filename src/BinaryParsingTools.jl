@@ -1,6 +1,7 @@
 module BinaryParsingTools
 
 using SwapStreams: SwapStream
+using Mmap
 using .Meta: isexpr
 
 """
@@ -37,18 +38,35 @@ swap_endianness(io::IO, ::Type{T}) where {T} = false
 
 Determine whether to cache the full IOStream in RAM or not to increase performance, using an `IOBuffer`.
 
-Defaults to true. This is advised for small-ish files, because access will be much easier if only a single IO access is
+Defaults to false. Turning it on is advised for small-ish files that will be used in their entirety, because access will be much easier if only a single IO access is
 required (one for reading the whole binary blob). On the other hand, that will increase RAM consumption,
 and dramatically so for large files.
 """
 function cache_stream_in_ram end
 
-cache_stream_in_ram(io::IO, ::Type{T}) where {T} = true
+cache_stream_in_ram(io::IO, ::Type{T}) where {T} = false
+
+"""
+    use_memory_mapping(io::IO, ::Type{T})
+
+Determine whether to memory-map the IO.
+
+This may result in faster accesses and improved memory usage, especially for large files.
+"""
+function use_memory_mapping end
+
+# Broken on 1.12 nightly, see https://github.com/JuliaLang/julia/issues/54128
+use_memory_mapping(io::IO, ::Type{T}) where {T} = false
 
 const BinaryIO = SwapStream
 
 function read_binary(io::IO, ::Type{T}; kwargs...) where {T}
-  cache_stream_in_ram(io, T) && (io = IOBuffer(read(io)))
+  if use_memory_mapping(io, T)
+    bytes = mmap(io)
+    io = cache_stream_in_ram(io, T) ? IOBuffer(copy(bytes)) : IOBuffer(bytes)
+  elseif cache_stream_in_ram(io, T)
+    io = IOBuffer(read(io))
+  end
   io = BinaryIO(swap_endianness(io, T), io)
   read(io, T; kwargs...)
 end

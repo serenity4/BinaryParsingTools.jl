@@ -8,10 +8,10 @@ Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
 SwapStreams = "0b152c4a-7e29-418b-9258-223db38db9d9"
 
 [compat]
-Logging = "1.11.0"
+Logging = "1"
 Mmap = "1"
-SwapStreams = "0.2.0"
-julia = "1.11"
+SwapStreams = "0.2"
+julia = "1.10"
 
 [extras]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"

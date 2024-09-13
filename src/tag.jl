@@ -20,6 +20,7 @@ const Tag4 = Tag{4}
 
 Base.uppercase(tag::Tag) = Tag(UInt8.((uppercase.(Char.(tag.data)))))
 Base.lowercase(tag::Tag) = Tag(UInt8.((lowercase.(Char.(tag.data)))))
+Base.reverse(tag::Tag) = Tag(reverse(tag.data))
 
 macro tag_str(str) Tag(str) end
 macro tag2_str(str) Tag2(str) end

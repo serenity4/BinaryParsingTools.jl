@@ -1,6 +1,6 @@
 name = "BinaryParsingTools"
 uuid = "6663bfc4-f836-4634-93ec-aee42a53a86a"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Cédric BELMANT"]
 
 [deps]

@@ -46,3 +46,5 @@ function Base.convert(::Type{Tag{N2}}, tag::Tag{N1}) where {N1,N2}
   end
   Tag{N2}(ntuple(i -> tag.data[i], N2))
 end
+
+(::Type{Tag{N2}})(tag::Tag{N1}) where {N1,N2} = convert(Tag{N2}, tag)

@@ -37,3 +37,12 @@ function Base.write(io::IO, tag::Tag)
   end
   nb
 end
+
+function Base.convert(::Type{Tag{N2}}, tag::Tag{N1}) where {N1,N2}
+  N1 === N2 && return tag
+  N1 < N2 && return Tag{N2}(ntuple(i -> get(tag.data, i, 0x00), N2))
+  for byte in tag.data[(N2 + 1):end]
+    byte == 0x00 || byte == 0x20 #= space =# || error("Expected $(repr('\0')) or $(repr(' ')) character for truncation, got $(Char(byte))")
+  end
+  Tag{N2}(ntuple(i -> tag.data[i], N2))
+end

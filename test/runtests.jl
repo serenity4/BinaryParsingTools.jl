@@ -35,6 +35,11 @@ BinaryParsingTools.swap_endianness(::IO, ::Type{TestDataSwapped}) = true
 
     t = Tag("FRA\0")
     @test t == tag4"FRA"
+    t3 = convert(Tag{3}, t)
+    @test t3 === tag3"FRA"
+    t4 = convert(Tag{4}, t3)
+    @test t4 === t
+    @test_throws "character for truncation" convert(Tag{2}, t)
 
     @test Tag("α") === tag2"α"
   end

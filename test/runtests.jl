@@ -29,10 +29,14 @@ BinaryParsingTools.swap_endianness(::IO, ::Type{TestDataSwapped}) = true
     @test tag"FRA " === t
     @test tag"FRA" !== tag"FRA "
     @test isa(tag"FRA", Tag3)
-    @test_throws "4-character" Tag4("FRA")
-    @test_throws "ASCII" Tag("FRAα")
+    @test_throws "at most 4 string codeunits" Tag4("FRACCC")
     @test uppercase(tag"fr") === tag"FR"
     @test lowercase(tag"FR") === tag"fr"
+
+    t = Tag("FRA\0")
+    @test t == tag4"FRA"
+
+    @test Tag("α") === tag2"α"
   end
 
   @testset "Parsing" begin

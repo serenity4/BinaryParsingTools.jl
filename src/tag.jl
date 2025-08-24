@@ -38,6 +38,8 @@ function Base.write(io::IO, tag::Tag)
   nb
 end
 
+Tag4(data::UInt32) = Tag4(ntuple(i -> (data << 8(4 - i)) >> 24, 4))
+
 function Base.convert(::Type{Tag{N2}}, tag::Tag{N1}) where {N1,N2}
   N1 === N2 && return tag
   N1 < N2 && return Tag{N2}(ntuple(i -> get(tag.data, i, 0x00), N2))
